@@ -6,6 +6,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 import torchvision
 from .lightning import ImageClassifier, ImageClassifierCallback
+from .image_classification_config import ImageClassificationConfig
 
 
 class SimpleMultiLabelImageClassificationPipeline:
@@ -16,29 +17,8 @@ class SimpleMultiLabelImageClassificationPipeline:
     # TODO: include image augmentations.
 
     @dataclass
-    class Config:
-        # model
-        num_classes: int
-        model_name: str = "resnet18"
-        pretrained: bool = True
-
-        # training loop
-        epochs: int = 10
-        train_steps_per_epoch: int = None
-        val_steps_per_epoch: int = None
-
-        # optimizer
-        lr: float = 0.0001
-
-        # data loading
-        batch_size: int = 32
-
-        num_workers: int = cpu_count()
-
-        # experiment tracking
-        experiment_name: str = "image_classification"
-        run_name: str = None
-        tracking_uri: str = "./mlruns"
+    class Config(ImageClassificationConfig):
+        ...
 
     def __init__(self, config):
         self._config = config

@@ -19,7 +19,7 @@ class SimpleMultiLabelImageClassificationPipeline:
     class Config(ImageClassificationConfig):
         ...
 
-    def __init__(self, config):
+    def __init__(self, config: Config):
         self._config = config
 
     def fit(self, dataset_builder):
@@ -45,6 +45,7 @@ class SimpleMultiLabelImageClassificationPipeline:
         else:
             tracking_uri = f"file:{self._config.tracking_uri}"
         trainer = Trainer(
+            accelerator=self._config.accelerator,
             deterministic=True,
             limit_train_batches=self._config.train_steps_per_epoch or 1.0,
             limit_val_batches=self._config.val_steps_per_epoch or 1.0,

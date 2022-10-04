@@ -40,6 +40,7 @@ class SimpleImageClassificationPipeline:
 
     def _create_trainer(self):
         trainer = Trainer(
+            accelerator=self._config.accelerator,
             deterministic=True,
             limit_train_batches=self._config.train_steps_per_epoch or 1.0,
             limit_val_batches=self._config.val_steps_per_epoch or 1.0,

@@ -19,8 +19,10 @@ class ImageClassificationConfig:
 
     # data loading
     batch_size: int = 32
-
     num_workers: int = cpu_count()
+
+    # device
+    accelerator: str = "gpu"  # None
 
     # experiment tracking
     experiment_name: str = "image_classification"

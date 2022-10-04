@@ -16,7 +16,7 @@ class MockDataset:
 
 
 class RandomImageClassificationDataset(MockDataset):
-    def __init__(self, height: int=100, width: int=100, num_classes: int=10, multilabel: int=False, num_channels=3, channels_first=True, **kwargs):
+    def __init__(self, height: int=100, width: int=100, num_classes: int=10, multilabel: int=False, num_channels=3, channels_first=False, **kwargs):
         self._height = height
         self._width = width
         self._num_classes = num_classes
@@ -48,7 +48,7 @@ class RandomImageClassificationDatasetBuilder:
     sample_size: int = 100
     multilabel: int = False
     num_channels: int = 3
-    channels_first: bool = True
+    channels_first: bool = False
 
     def training_dataset(self):
         return RandomImageClassificationDataset(

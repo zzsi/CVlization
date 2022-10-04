@@ -24,7 +24,8 @@ class SimpleMultiLabelImageClassificationPipeline:
 
     def fit(self, dataset_builder):
         pl_model = self._create_model()
-        trainer = self._create_trainer()
+        experiment_tracker = self._setup_experiment_tracker()
+        trainer = self._create_trainer(experiment_tracker)
         train_dataloader = self._create_training_dataloader(dataset_builder)
         val_dataloader = self._create_validation_dataloader(dataset_builder)
         trainer.fit(pl_model, train_dataloader, val_dataloader)
@@ -36,28 +37,38 @@ class SimpleMultiLabelImageClassificationPipeline:
             pretrained=self._config.pretrained, num_classes=self._config.num_classes)
         pl_model = ImageClassifier(
             model=model, num_classes=self._config.num_classes, lr=self._config.lr)
+        # This loss is responsible for multi-label classification.
         pl_model.loss = nn.BCEWithLogitsLoss()
         return pl_model
 
-    def _create_trainer(self):
+    def _create_trainer(self, experiment_tracker):
+        trainer = Trainer(
+            default_root_dir=self._config.lightning_root_dir,
+            deterministic=True,
+            accelerator=self._config.accelerator,
+            gpus=self._config.gpus,
+            limit_train_batches=self._config.train_steps_per_epoch or 1.0,
+            limit_val_batches=self._config.val_steps_per_epoch or 1.0,
+            max_epochs=self._config.epochs,
+            logger=experiment_tracker,
+            callbacks=[ImageClassifierCallback()],
+        )
+        return trainer
+    
+    def _setup_experiment_tracker(self):
         if self._config.tracking_uri is None:
             tracking_uri = None
         else:
             tracking_uri = f"file:{self._config.tracking_uri}"
-        trainer = Trainer(
-            accelerator=self._config.accelerator,
-            deterministic=True,
-            limit_train_batches=self._config.train_steps_per_epoch or 1.0,
-            limit_val_batches=self._config.val_steps_per_epoch or 1.0,
-            max_epochs=self._config.epochs,
-            logger=MLFlowLogger(
-                experiment_name=self._config.experiment_name,
-                run_name=self._config.run_name,
-                tracking_uri=tracking_uri,
-            ),
-            callbacks=[ImageClassifierCallback()]
+        self._experiment_tracker = experiment_tracker = MLFlowLogger(
+            experiment_name=self._config.experiment_name,
+            run_name=self._config.run_name,
+            tracking_uri=tracking_uri,
         )
-        return trainer
+        
+        for k, v in self._config.__dict__.items():
+            experiment_tracker.experiment.log_param(run_id=experiment_tracker.run_id, key=k, value=v)
+        return self._experiment_tracker
 
     def _transform_training_dataset(self, dataset):
         transform_train = transforms.Compose(
@@ -65,9 +76,6 @@ class SimpleMultiLabelImageClassificationPipeline:
                 transforms.ToTensor(),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomRotation(15),
-                transforms.Normalize(
-                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-                ),
             ]
         )
         return TransformedDataset(dataset, transform_train)
@@ -76,16 +84,13 @@ class SimpleMultiLabelImageClassificationPipeline:
         transform_val = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-                ),
             ]
         )
         return TransformedDataset(dataset, transform_val)
 
     def _create_training_dataloader(self, dataset_builder):
         train_ds = self._transform_training_dataset(
-            dataset_builder.build_train_dataset()
+            dataset_builder.training_dataset()
         )
         return DataLoader(
             train_ds,
@@ -96,7 +101,7 @@ class SimpleMultiLabelImageClassificationPipeline:
 
     def _create_validation_dataloader(self, dataset_builder):
         val_ds = self._transform_validation_dataset(
-            dataset_builder.build_val_dataset()
+            dataset_builder.validation_dataset()
         )
         return DataLoader(
             val_ds,

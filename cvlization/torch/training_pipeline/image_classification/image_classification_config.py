@@ -23,8 +23,10 @@ class ImageClassificationConfig:
 
     # device
     accelerator: str = "gpu"  # None
+    gpus: int = 1  # None
 
     # experiment tracking
     experiment_name: str = "image_classification"
     run_name: str = None
     tracking_uri: str = "./mlruns"
+    lightning_root_dir: str = "./lightning_logs"
